@@ -1,0 +1,50 @@
+﻿    
+<MudPaper Elevation="0">
+    <MudNavMenu Color="Color.Tertiary" Bordered="true">
+
+        <div class="top-row ps-3 mb-4">
+            <div class="container-fluid">
+                <div class="d-flex align-items-center navbar-light">
+                    <img src="image/logo.png" alt="Coffee Logo" style="height: 40px; margin-right: 10px;">
+                    <a class="navbar-brand" href="#">Bislerium Cafe</a>
+                </div>
+            </div>`
+        </div>
+
+        @if(isAdmin){
+
+        <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+                <span class="text-primary">Dashboard</span>
+        </MudNavLink>
+
+        }
+
+        <MudNavLink Href="/items" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Storage">Items</MudNavLink>
+        <MudNavLink Href="/cart-items" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Storage">View Cart</MudNavLink>
+        <MudNavLink Href="/generate-pdf" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Storage">Generate Report</MudNavLink>
+        <MudNavLink Href="/members" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Storage">Members</MudNavLink>
+
+    </MudNavMenu>
+</MudPaper>
+
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private bool isAdmin { get; set; }
+
+    protected override void OnInitialized()
+    {
+        isAdmin = _globalState.CurrentUser?.Role?.ToString() == "admin";
+
+    }
+}

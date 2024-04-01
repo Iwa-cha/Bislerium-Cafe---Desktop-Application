@@ -1,0 +1,21 @@
+﻿@inherits LayoutComponentBase
+@layout ParentLayout
+@inject NavigationManager NavManager
+
+<MudAppBar>
+    <MudChip Icon="@Icons.Material.Filled.Person" Color="Color.Dark" Class="py-2 px-3">@_globalState.CurrentUser?.UserName</MudChip>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Login" Color="Color.Dark" OnClick="@(() => NavManager.NavigateTo("/"))">Log out</MudButton>
+    </MudAppBar>
+    <MudDrawer Open="true">
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+       <div class="py-7 px-4">
+            @Body
+       </div>
+</MudMainContent>
+
+@code {
+    [CascadingParameter] GlobalState _globalState { get; set; }
+}

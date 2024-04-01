@@ -1,0 +1,93 @@
+﻿@page "/dashboard"
+@inject NavigationManager NavManager
+@inject OrderServices OrderServices
+
+<MudTable Items="@Elements" Dense="@dense" Hover="@hover" Bordered="@bordered" Striped="@striped"
+          Filter="new Func<Order,bool>(FilterFunc1)">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5" Class=" text-danger" >All Sales Transactions</MudText>
+        <MudSpacer />
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+
+        <HeaderContent>
+        <MudTh><b>OrderID</b></MudTh>
+        <MudTh><b>Member Name</b></MudTh>
+            <MudTh><b>Phone Number</b></MudTh>
+            <MudTh><b>Order Date</b></MudTh>
+            <MudTh><b>Order Total</b></MudTh>
+            <MudTh><b>Discount</b></MudTh>
+            <MudTh><b>Grand Total</b></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+
+        <MudTd DataLabel="Nr">@(context.ID)</MudTd>
+            <MudTd DataLabel="Sign"><MudChip Text="purple" Color="Color.Primary">@context.MemberName</MudChip></MudTd>
+            <MudTd DataLabel="Name">@context.MemberPhoneNum</MudTd>
+            <MudTd DataLabel="Name">@context.OrderDate</MudTd>
+            <MudTd DataLabel="Name">$ @context.GrandTotal</MudTd>
+            <MudTd DataLabel="Name">$ @context.Discount</MudTd>
+            <MudTd DataLabel="Name">$ @(context.GrandTotal - context.Discount)</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+
+
+    </MudTable>
+
+    <div class="d-flex flex-wrap mt-4">
+        <MudSwitch @bind-Checked="@hover" Color="Color.Primary">Hover</MudSwitch>
+        <MudSwitch @bind-Checked="@dense" Color="Color.Secondary">Dense</MudSwitch>
+        <MudSwitch @bind-Checked="@striped" Color="Color.Tertiary">Striped</MudSwitch>
+        <MudSwitch @bind-Checked="@bordered" Color="Color.Warning">Bordered</MudSwitch>
+        <MudSpacer />
+    </div>
+
+    @code {
+    [CascadingParameter] GlobalState _globalState { get; set; }
+
+    private bool dense = false;
+    private bool hover = true;
+    private bool striped = false;
+    private bool bordered = false;
+
+    private string searchString { set; get; } = "";
+
+
+    private IEnumerable<Order> Elements = new List<Order>();
+
+ 
+
+    protected override void OnInitialized()
+    {
+        if (_globalState.CurrentUser == null)
+        {
+            NavManager.NavigateTo("/login");
+        }
+
+        Elements = OrderServices.GetOrders();
+
+    }
+
+    private bool FilterFunc1(Order element) => FilterFunc(element, searchString);
+
+    private bool FilterFunc(Order element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.MemberName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.MemberPhoneNum.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (element.OrderDate.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (element.GrandTotal.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+     
+        return false;
+    }
+}

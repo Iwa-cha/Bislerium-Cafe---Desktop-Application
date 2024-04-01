@@ -1,0 +1,271 @@
+@page "/items"
+@inject ItemServices ItemServices
+@inject OrderServices OrderServices
+@inject ISnackbar Snackbar
+
+
+<MudButton Variant="Variant.Outlined" Color="Color.Primary" @onclick="OpenAddItemForm">Add Item</MudButton>
+
+<br />
+<br />
+
+<MudTable Items="@Elements" Dense="@dense" Hover="@hover" Bordered="@bordered" Striped="@striped"
+          Filter="new Func<Item,bool>(FilterFunc1)">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5" Class="text-danger">All Items</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+
+    <HeaderContent>
+        <MudTh>Item Name</MudTh>
+        <MudTh>Item Type</MudTh>
+        <MudTh>Price</MudTh>
+        <MudTh>Action</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nr">@context.ItemName</MudTd>
+        <MudTd DataLabel="Sign">@context.ItemType</MudTd>
+        <MudTd DataLabel="Name">NRP @context.ItemPrice</MudTd>
+
+        <MudTd DataLabel="Action">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteItemFromInventory(context.ItemID))" Disabled="@(!isAdmin)" Style="color:firebrick"></MudIconButton>
+            <MudIconButton Icon="@Icons.Material.Filled.AddShoppingCart"  OnClick="@(() => AddItemInCart(context.ItemID, context.ItemName, context.ItemType, context.ItemPrice))" Style="color:blueviolet"></MudIconButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"  OnClick="@(()=> OpenDialog(context.ItemID.ToString()))" Disabled="@(!isAdmin)" Style="color:springgreen"></MudIconButton>
+
+          @*   <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.AddShoppingCart" Color="Color.Secondary"
+                       OnClick="@(() => AddItemInCart(context.ItemID, context.ItemName, context.ItemType, context.ItemPrice))">Add to Cart</MudButton>
+
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Success" Disabled="@(!isAdmin)"
+                       OnClick="@(()=> OpenDialog(context.ItemID.ToString()))">Edit</MudButton>
+
+            <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" Disabled="@(!isAdmin)"
+                       OnClick="@(() => DeleteItemFromInventory(context.ItemID))">Delete</MudButton> *@
+        </MudTd>
+
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+
+
+<MudDialog @bind-IsVisible="visible" Options="dialogOptions">
+
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Edit Item Details
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+
+        <MudTextField @bind-Value="_pass" Label="Password" Variant="Variant.Text"></MudTextField>
+        <MudTextField @bind-Value="_itemPrice" Label="Price" Variant="Variant.Text"></MudTextField>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="CloseDialog" Class="px-10">Close</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="EditItem" Class="px-10">Update</MudButton>
+    </DialogActions>
+
+</MudDialog>
+
+
+<MudDialog @bind-IsVisible="visibleAddItemDialog" Options="dialogOptions">
+
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Add Item
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudSelect T="string" Label="Item Type" AnchorOrigin="Origin.BottomCenter" @bind-Value="_item.ItemType">
+            <MudSelectItem Value="@("Coffee")" />
+            <MudSelectItem Value="@("Add-in")" />
+        </MudSelect>
+        <MudTextField @bind-Value="_item.ItemName" Label="Item Name" Variant="Variant.Text"></MudTextField>
+        <MudTextField @bind-Value="_item.ItemPrice" Label="Price" Variant="Variant.Text" Min="0.0"></MudTextField>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="AddItemToInventory" Class="px-10">Add Item</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="CloseDialogForm" Class="px-10">Close</MudButton>
+    </DialogActions>
+
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+    private bool isAdmin { get; set; }
+
+    private bool dense = true;
+    private bool hover = true;
+    private bool striped = false;
+    private bool bordered = false;
+
+
+    private IEnumerable<Item> Elements = new List<Item>();
+
+
+    protected override void OnInitialized()
+    {
+        isAdmin = _globalState.CurrentUser.Role.ToString() == "admin";
+        Elements = ItemServices.GetItemsFromFile();
+
+    }
+
+    private bool visible;
+    private string _itemID { get; set; }
+    private double _itemPrice { get; set; }
+    private string _pass { get; set; }
+
+    private Item _item { get; set; } = new();
+    private bool visibleAddItemDialog;
+
+    private void OpenAddItemForm()
+    {
+        visibleAddItemDialog = true;
+    }
+
+    private void CloseDialogForm()
+    {
+        visibleAddItemDialog = false;
+        _item = new();
+    }
+
+    private void OpenDialog(string itemID)
+    {
+        visible = true;
+        _itemID = itemID;
+
+        Item item = ItemServices.GetItemByID(itemID);
+
+        if (item != null)
+        {
+
+            _itemPrice = item.ItemPrice;
+        }
+    }
+
+    private void CloseDialog()
+    {
+        visible = false;
+    }
+
+    private DialogOptions dialogOptions = new() { FullWidth = true };
+
+    protected void AddItemToInventory()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_item.ItemName) || string.IsNullOrEmpty(_item.ItemType))
+            {
+                Snackbar.Add("All Fields are required", Severity.Error);
+                return;
+            }
+
+            if (_item.ItemPrice <= 0)
+            {
+                Snackbar.Add("Please enter valid price", Severity.Error);
+                return;
+            }
+
+            ItemServices.AddItem(_item);
+
+            Snackbar.Add("Item added", Severity.Success);
+
+            visibleAddItemDialog = false;
+
+            Elements = ItemServices.GetItemsFromFile();
+
+            _item = new();
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+
+        }
+    }
+
+    protected void EditItem()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_pass))
+            {
+                Snackbar.Add("Password is required", Severity.Error);
+                return;
+            }
+
+
+            if (_itemPrice <= 0)
+            {
+                Snackbar.Add("Please enter valid price", Severity.Error);
+                return;
+            }
+
+            if (_pass != _globalState.CurrentUser.Password)
+            {
+                Snackbar.Add("Invalid current password", Severity.Error);
+                return;
+            }
+
+            ItemServices.UpdateItem(_itemID, _itemPrice);
+
+            Snackbar.Add("Item details updated", Severity.Success);
+
+            visible = false;
+
+            Elements = ItemServices.GetItemsFromFile();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+
+        }
+    }
+
+
+    private void AddItemInCart(Guid itemID, string itemName, String itemType, Double itemPrice)
+    {
+        OrderServices.AddItemToCart(_globalState.CartItems, itemID, itemName, itemType, itemPrice);
+
+        Snackbar.Add($"{itemName} is Added to cart", Severity.Success);
+    }
+
+
+    private void DeleteItemFromInventory(Guid itemID)
+    {
+        ItemServices.DeleteItem(itemID.ToString());
+
+        Snackbar.Add("Item is deleted", Severity.Success);
+
+        Elements = ItemServices.GetItemsFromFile();
+    }
+
+
+    private string searchString { set; get; } = "";
+
+    private bool FilterFunc1(Item element) => FilterFunc(element, searchString);
+
+    private bool FilterFunc(Item element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.ItemName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.ItemType.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (element.ItemPrice.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+}

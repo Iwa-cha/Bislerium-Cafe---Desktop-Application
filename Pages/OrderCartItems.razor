@@ -1,0 +1,290 @@
+﻿@page "/cart-items"
+@inject OrderServices OrderServices
+@inject ISnackbar Snackbar
+@inject MemberServices MemberServices
+@inject NavigationManager NavManager
+@inject OrderServices OrderServices
+
+<MudTable Items="@Elements" Dense="@dense" Hover="@hover" Bordered="@bordered" Striped="@striped">
+
+    <ToolBarContent>
+        <MudText Typo="Typo.h5" Class=" text-danger">Cart Items</MudText>
+
+       
+        </ToolBarContent>
+
+        <HeaderContent>
+            <MudTh>Item Name</MudTh>
+            <MudTh>Item Type</MudTh>
+            <MudTh>Price</MudTh>
+            <MudTh Class="text-center">Quantity</MudTh>
+            <MudTh>Total Price</MudTh>
+            <MudTh>Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nr">@context.ItemName</MudTd>
+            <MudTd DataLabel="Sign">@context.ItemType</MudTd>
+            <MudTd DataLabel="Name">@context.Price</MudTd>
+
+            <MudTd DataLabel="Quantity">
+
+                <MudIconButton Icon="@Icons.Material.Filled.Remove" aria-label="subtract"
+                               OnClick="@(() => UpdateQuantity(context.ID, "subtract"))"></MudIconButton>
+
+                <span>
+                    @context.Quantity
+                </span>
+
+                <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="add" OnClick="@(() => UpdateQuantity(context.ID, "add"))"></MudIconButton>
+
+            </MudTd>
+
+            <MudTd DataLabel="Name">NRP @context.TotalPrice</MudTd>
+
+
+            <MudTd DataLabel="Action">
+
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                           OnClick="@(() => DeleteItem(context.ID))">Delete</MudButton>
+            </MudTd>
+
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+
+    </MudTable>
+
+  @if (_globalState.CartItems.Count > 0) {
+        <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="DisplayForm" Class="my-4">Checkout</MudButton>
+
+    <MudSpacer />
+
+    <div>
+        <MudText Typo="Typo.subtitle1">Total: @_totalAmt</MudText>
+        
+        <MudText Typo="Typo.subtitle1">Discount: @_discountAmount</MudText>
+        <MudText Typo="Typo.subtitle1">Grand Total: @(_totalAmt - _discountAmount)</MudText>
+    </div>
+   
+        
+}
+
+@if (_displayForm)
+{
+    <div style="width:400px;" class="mt-5">
+        <MudTextField @bind-Value="_member.Name" Label="Customer Name" Variant="Variant.Outlined" Class="mb-5" Margin="Margin.Dense"></MudTextField>
+        <MudTextField @bind-Value="_member.PhoneNum" Label="Customer Phone Number" Variant="Variant.Outlined" Class="mb-5" Margin="Margin.Dense"></MudTextField>
+
+        @if (_totalRemainingFreeCoffeeCount != 0)
+        {
+            <div class="d-flex gap-x-3">
+
+                <MudTextField @bind-Value="_totalRemainingFreeCoffeeCount" Label="Free Coffee Count" ReadOnly="true" Variant="Variant.Text" />
+
+                <MudButton Variant="Variant.Filled" OnClick="ReedeemCoffee">Reedem</MudButton>
+            </div>
+
+        }
+
+    </div>
+
+
+
+    <br />
+
+    @if (_step == 1)
+    {
+
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Color="Color.Error" Class=" mr-4"
+                   OnClick="HanldeMemberBenifits">Check Membership</MudButton>
+    }
+
+    @if (_step == 2)
+    {
+
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ShoppingCartCheckout" Color="Color.Error" Class=" mr-4"
+                   OnClick="CartCheckout">Proceed</MudButton>
+    }
+
+
+    <MudButton Variant="Variant.Outlined" DisableElevation="true" Color="Color.Error" @onclick="HideForm" Class="mr-5">Cancel</MudButton>
+}
+
+
+@code {
+    private int _step { set; get; } = 1;
+
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+
+
+    private bool dense = true;
+    private bool hover = true;
+    private bool striped = false;
+    private bool bordered = false;
+
+    private double _totalAmt { set; get; } = 0;
+
+    private bool _displayForm { get; set; } = false;
+
+    private int _freeCoffeeCount { get; set; } = 0;
+
+    private double _discountAmount { set; get; } = 0;
+
+    private void DisplayForm() => _displayForm = true;
+    private void HideForm() => _displayForm = false;
+
+    private Member _member { set; get; } = new();
+
+    private int _totalRemainingFreeCoffeeCount { set; get; } = 0;
+
+    private IEnumerable<OrderItem> Elements = new List<OrderItem>();
+
+    protected override void OnInitialized()
+    {
+        Elements = _globalState.CartItems;
+        _totalAmt = OrderServices.CalcGrandTotal(_globalState.CartItems);
+
+    }
+
+
+    private void UpdateQuantity(Guid orderItemID, string action)
+    {
+        OrderServices.AdjustOrderItemQuantity(_globalState.CartItems, orderItemID, action);
+        _totalAmt = OrderServices.CalcGrandTotal(_globalState.CartItems);
+
+    }
+
+
+    public void DeleteItem(Guid orderItemID)
+    {
+        OrderItem orderItem = _globalState.CartItems.FirstOrDefault(x => x.ID == orderItemID);
+
+        if (orderItem != null)
+        {
+            _globalState.CartItems.Remove(orderItem);
+        }
+
+        _totalAmt = OrderServices.CalcGrandTotal(_globalState.CartItems);
+
+        Elements = _globalState.CartItems;
+
+    }
+
+
+    private void CartCheckout()
+    {
+        try
+        {
+            Member member = MemberServices.GetCustomerByPhoneNum(_member.PhoneNum);
+
+            if (member == null)
+            {
+                MemberServices.AddMember(_member);
+            }
+
+            _totalAmt = OrderServices.CalcGrandTotal(_globalState.CartItems);
+
+            if (_totalRemainingFreeCoffeeCount != 0)
+            {
+                MemberServices.UpdateRedeemedCoffeeCount(_member.PhoneNum, _totalRemainingFreeCoffeeCount);
+            }
+
+            Order order = new()
+                {
+                    MemberID = _member.ID,
+                    MemberName = _member.Name,
+                    MemberPhoneNum = _member.PhoneNum,
+                    OrderItems = _globalState.CartItems,
+                    GrandTotal = _totalAmt
+                };
+
+
+            OrderServices.PurchaseOrder(order);
+
+            Snackbar.Add("Order is Placed", Severity.Success);
+
+            _globalState.CartItems = new List<OrderItem>();
+            Elements = _globalState.CartItems;
+
+            _displayForm = false;
+
+        }
+        catch (Exception e)
+        {
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+    }
+
+    private void HanldeMemberBenifits()
+    {
+        if (string.IsNullOrEmpty(_member.PhoneNum) || string.IsNullOrEmpty(_member.Name))
+        {
+            Snackbar.Add("Enter All Details", Severity.Error);
+        }
+
+        if (!Utils.IsNumeric(_member.PhoneNum))
+        {
+            Snackbar.Add("Enter Valid Phone Number", Severity.Error);
+            return;
+        }
+
+        Member member = MemberServices.GetCustomerByPhoneNum(_member.PhoneNum);
+
+        if (member == null)
+        {
+            Snackbar.Add("Customer is not a member", Severity.Error);
+
+            _step++;
+
+            return;
+        }
+
+        _member = member;
+
+        //Retrives membership benefits if customer is a member
+        int countTotalFreeCoffee = MemberServices.TotalFreeCoffeeCount(_member.PhoneNum);
+
+        // _totalRemainingFreeCoffeeCount = countTotalFreeCoffee;
+        if (countTotalFreeCoffee <= 0)
+        {
+            _totalRemainingFreeCoffeeCount = 0;
+        }
+        else
+        {
+            _totalRemainingFreeCoffeeCount = countTotalFreeCoffee - _member.RedeemedCoffeeCount;
+        }
+
+        bool isCustomerRegularMember = MemberServices.CheckIfCustomerIsReguralMember(_member.PhoneNum);
+
+        if (isCustomerRegularMember)
+        {
+            _discountAmount = _totalAmt * 0.1;
+        }
+
+        Snackbar.Add("Customer is a member", Severity.Success);
+        _step++;
+
+    }
+
+    private void ReedeemCoffee()
+    {
+        Dictionary<string, double> membershipBenifies = OrderServices.RedeemFreeCoffees(_totalRemainingFreeCoffeeCount, _globalState.CartItems);
+
+        int redeemedCoffeeCount = (int)membershipBenifies["redeemedCoffeeCount"];
+        double discountFromRedeemption = membershipBenifies["discount"];
+
+
+        if (_discountAmount == 0)
+        {
+            _discountAmount = discountFromRedeemption;
+
+            _member.RedeemedCoffeeCount = redeemedCoffeeCount;
+
+        }
+
+        Snackbar.Add($"{redeemedCoffeeCount} coffees are redeemed.", Severity.Success);
+    }
+
+}

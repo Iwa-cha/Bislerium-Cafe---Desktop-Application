@@ -1,0 +1,83 @@
+@page "/members"
+@inject MemberServices MemberServices
+@inject NavigationManager NavManager
+
+<MudTable Items="@Elements" Dense="@dense" Hover="@hover" Bordered="@bordered" Striped="@striped">
+    <ToolBarContent>
+        <MudText Typo="Typo.h5" Class="text-danger">All Members List</MudText>
+
+        <MudSpacer />
+
+        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+
+
+        </ToolBarContent>
+
+        <HeaderContent>
+            <MudTh>Member ID</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Phone Number</MudTh>
+            <MudTh>Order Count</MudTh>
+            <MudTh>Membership Registration Date</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nr">@context.ID</MudTd>
+            <MudTd DataLabel="Sign">
+                <MudChip Color="Color.Primary">@context.Name</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Name">@context.PhoneNum</MudTd>
+            <MudTd DataLabel="Name">@context.OrderCount</MudTd>
+            <MudTd DataLabel="Name">@context.MembershipJoinDate</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+ 
+
+@code {
+    [CascadingParameter]
+    private GlobalState _globalState { get; set; }
+
+
+    private bool dense = true;
+    private bool hover = true;
+    private bool striped = true;
+    private bool bordered = true;
+
+   
+
+    private IEnumerable<Member> Elements = new List<Member>();
+
+    protected override void OnInitialized()
+    {
+        Elements = MemberServices.GetMembers();
+
+    }
+
+    private string searchString { set; get; } = "";
+
+    private bool FilterFunc1(Member element) => FilterFunc(element, searchString);
+
+    private bool FilterFunc(Member element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.PhoneNum.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (element.MembershipJoinDate.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (element.ID.ToString().Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+
+        return false;
+    }
+
+
+}

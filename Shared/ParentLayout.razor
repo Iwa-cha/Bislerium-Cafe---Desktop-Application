@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+@inject ItemServices ItemServices
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+
+<MudLayout>
+    <CascadingValue Value="this">
+        <CascadingValue Value="_globalState">
+            @Body
+        </CascadingValue>
+    </CascadingValue>
+</MudLayout>
+
+
+@code {
+    private GlobalState _globalState = new();
+
+    protected override void OnInitialized()
+    {
+        ItemServices.SeedItems();
+    }
+}

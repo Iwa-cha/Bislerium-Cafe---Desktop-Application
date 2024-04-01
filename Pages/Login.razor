@@ -1,0 +1,101 @@
+@page "/"
+@layout EmptyLayout
+@inject UserServices UserServices
+@inject ISnackbar Snackbar
+@inject NavigationManager NavManager
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: url('image/bg.jpg') no-repeat center center fixed;
+        background-size: cover;
+        font-family: 'Arial', sans-serif;
+    }
+
+    .login-container {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        width: 400px;
+        text-align: center;
+        margin-top: 100px;
+    }
+
+    .login-container h2 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .login-container img {
+        height: 60px;
+        margin-bottom: 20px;
+    }
+
+    .login-form input {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 16px;
+    }
+
+    .login-form .login-button {
+        background-color: #4CAF50;
+        color: #fff;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 18px;
+    }
+</style>
+
+<div class="d-flex justify-content-center align-items-center">
+    <div class="login-container">
+        <img src="image/logo.png" alt="Cafe Logo">
+        <h2>Bislerium Cafe</h2>
+        <div class="login-form">
+            <MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Filled"></MudTextField>
+            <MudTextField @bind-Value="_password" Label="Password" Variant="Variant.Filled" InputType="InputType.Password"></MudTextField>
+
+            <br>
+            <MudButton class="login-button" Variant="Variant.Filled" Color="Color.Dark" OnClick="LogInHandler">Login</MudButton>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] GlobalState _globalState { get; set; }
+
+    private string _username { get; set; } = "admin";
+    private string _password { get; set; } = "admin";
+
+    private void LogInHandler()
+    {
+        try
+        {
+            _globalState.CurrentUser = UserServices.LogIn(_username, _password);
+
+            _username = "";
+            _password = "";
+
+            Snackbar.Add("User logged in successfully", Severity.Success);
+
+            if (_globalState.CurrentUser.Role == "admin")
+            {
+                NavManager.NavigateTo("/dashboard");
+                return;
+            }
+
+            NavManager.NavigateTo("/items");
+        }
+        catch (Exception e)
+        {
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+    }
+}
